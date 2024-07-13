@@ -1,0 +1,46 @@
+// Map Center
+Map.setCenter(89.5664259528051, 22.510554549768624);
+Map.setZoom(8);
+//Call area of interest
+var aoi = ee.FeatureCollection('projects/ee-murp210405/assets/Aoi')
+
+//Specific Satelite Image Collection
+var landsat = ee.ImageCollection('LANDSAT/LC08/C02/T1_RT')
+
+
+//Image Classification (Change the year-month-date)
+var spatialFiltered = landsat.filterBounds(aoi);
+var temporalFiltered = spatialFiltered.filterDate('2013-09-01', '2013-12-31'); // Temporal Firtering
+print('temporalFiltered', temporalFiltered);
+
+// Clould Free Image
+var cloud_free = temporalFiltered.filter(ee.Filter.lt('CLOUD_COVER',1)); //Filtering out Cloudy Images 
+print('Cloud Free Images',cloud_free);
+
+// Sort the Cloud Free Image
+var sorted = cloud_free.sort('DATE_ACQUIRED'); //Sorting
+print('Sorted Cloud Free Images :', sorted);
+var img = sorted;
+var img2 = cloud_free;
+
+
+
+// Composite the Image
+var composite = ee.Algorithms.Landsat.simpleComposite({
+  collection: img,
+  asFloat: true
+}).clip(aoi);
+
+Map.addLayer(composite, {bands: ['B4', 'B3', 'B2'], max: 0.5, gamma: 2},'L8 Image', true);
+print('Composite image:', composite)
+
+//Image Export to Drive
+
+Export.image.toDrive({
+  image: composite,
+  description: 'composite13',
+  folder: 'Ecology',
+  scale:30,
+  maxPixels: 500000000,
+  region: aoi
+});
